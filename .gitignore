@@ -1,0 +1,52 @@
+# --- Environment ---
+# Ignore environment variables file to keep secrets secure.
+.env
+
+# --- Python Virtual Environments ---
+# Standard Python virtual environment folders
+venv/
+*.venv
+env/
+.env/
+
+# --- Python Cache & Compiled Files ---
+# Ignore Python bytecode and cache folders
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# --- Session Data ---
+# Ignore the sessions directory which contains generated vector stores and logs.
+sessions/
+
+# --- IDE & Editor Configuration ---
+# Ignore configuration files from common editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Build & Distribution Artifacts ---
+# Ignore packaging and build directories
+build/
+dist/
+*.egg-info/
+/site/
+
+# --- Testing & Coverage ---
+# Ignore testing tools' cache and report files
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Operating System Files ---
+# Ignore macOS specific files
+.DS_Store
+
+# --- Log Files ---
+# Ignore log files
+*.log
