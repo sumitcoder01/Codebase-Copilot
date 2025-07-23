@@ -5,6 +5,7 @@
 # --- Python Virtual Environments ---
 # Standard Python virtual environment folders
 venv/
+.idx
 *.venv
 env/
 .env/
