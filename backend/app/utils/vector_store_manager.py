@@ -4,7 +4,7 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings # Using OpenAI's as a default high-quality embedder
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 log = logging.getLogger(__name__)
 
@@ -28,13 +28,18 @@ class VectorStoreManager:
         self.session_id = session_id
         self.persist_directory = os.path.join(SESSIONS_DIR, self.session_id)
         
-        # Using OpenAI's embedding model is a common and robust choice.
-        # This could also be made configurable in the future.
-        self.embedding_function = OpenAIEmbeddings(
-            api_key=os.getenv("OPENAI_API_KEY")
+        # 2. Use Google's Gemini for creating the embeddings.
+        # This requires the GOOGLE_API_KEY to be set in the .env file.
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        if not google_api_key:
+            raise ValueError("GOOGLE_API_KEY is not set in the environment. It is required for embeddings.")
+            
+        self.embedding_function = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",  # This is a model specifically for embedding tasks
+            google_api_key=google_api_key
         )
 
-        log.info(f"VectorStoreManager initialized for session '{session_id}' at '{self.persist_directory}'")
+        log.info(f"VectorStoreManager initialized for session '{session_id}' at '{self.persist_directory}' using Gemini embeddings.")
 
     def create_vector_store(self, documents: List[Document]) -> Chroma:
         """

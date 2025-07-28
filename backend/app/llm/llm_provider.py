@@ -8,25 +8,12 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_groq import ChatGroq
 
-# Load environment variables from .env file at the start
 load_dotenv()
-
-# Get a logger for this module
 log = logging.getLogger(__name__)
 
 def get_llm():
     """
     Reads the environment variables and returns the configured LLM provider instance.
-
-    This function acts as a factory, providing a single point of configuration
-    for the entire backend's language model needs.
-
-    Raises:
-        ValueError: If the LLM_PROVIDER is not set, is unsupported, or if the
-                    corresponding API key is missing.
-
-    Returns:
-        BaseChatModel: An instance of the selected chat model.
     """
     provider = os.getenv("LLM_PROVIDER")
     log.info(f"Attempting to initialize LLM provider: {provider}")
@@ -41,14 +28,12 @@ def get_llm():
         api_key = os.getenv("DEEPSEEK_API_KEY")
         if not api_key:
             raise ValueError("DEEPSEEK_API_KEY is not set in the environment.")
-        # Specify a default model for DeepSeek if needed
-        return ChatDeepseek(api_key=api_key, model="deepseek-chat")
+        return ChatDeepSeek(api_key=api_key, model="deepseek-chat" , temperature=0.7)
 
     elif provider == "GEMINI":
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY is not set in the environment.")
-        # Gemini uses "google_api_key" as the argument name
         return ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=api_key)
 
     elif provider == "OPENAI":
@@ -67,7 +52,6 @@ def get_llm():
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY is not set in the environment.")
-        # Groq has high-performance models like LLaMA3
         return ChatGroq(api_key=api_key, model_name="llama3-8b-8192")
 
     else:

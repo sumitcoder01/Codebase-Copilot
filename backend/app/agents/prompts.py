@@ -1,29 +1,27 @@
 from langchain_core.prompts import PromptTemplate
 
 # --- SUPERVISOR AGENT PROMPT ---
-# This prompt guides the supervisor agent in routing the user's query.
 SUPERVISOR_PROMPT = """
-You are a supervisor agent in a multi-agent system for codebase analysis. 
-Your primary role is to classify the user's query and route it to the appropriate specialized agent.
+You are a supervisor agent in a multi-agent system for codebase analysis.
+Your sole responsibility is to classify the user's query and output the name of the single most appropriate agent to handle it.
 
-Based on the user's query and the conversation history, determine which of the following agents should handle the request:
+The user's query is provided below, enclosed in <query> tags.
+<query>
+{messages}
+</query>
 
-1.  **QA_Agent**: Answers specific questions about the code, such as "How does function X work?" or "Where is the authentication logic handled?". Use this for questions that require finding and understanding code.
-2.  **Debug_Agent**: Analyzes a specific file for bugs, vulnerabilities, or code smells. Triggered by keywords like "debug", "find bugs in", "vulnerabilities", or "review".
-3.  **Refactor_Agent**: Suggests improvements to a specific file's structure, readability, or performance. Triggered by keywords like "refactor", "improve", "optimize", or "clean up".
-4.  **Diagram_Agent**: Generates diagrams (in Mermaid.js format) to visualize code structure, logic flow, or architecture. Triggered by "diagram", "flowchart", "visualize", or "architecture".
+Based on this query, choose one of the following agents:
+- QA_Agent: For questions about how the code works or where logic is located.
+- Debug_Agent: For requests to find bugs, errors, or vulnerabilities in a file.
+- Refactor_Agent: For requests to improve or rewrite a file.
+- Diagram_Agent: For requests to generate diagrams, flowcharts, or visualizations.
 
-**Output Format**:
-Respond with a single word corresponding to the chosen agent's name (e.g., "QA_Agent", "Debug_Agent"). 
-If the query seems like a general conversation or a follow-up thank you, respond with "Finish".
-Do not provide any other explanation or text.
+If the query is a simple greeting, a thank you, or does not fit any of the above, choose "Finish".
+
+Your output MUST be a single word from the list above. Do NOT provide any explanation or other text.
 """
 
-
 # --- REACT AGENT BASE PROMPT ---
-# This is a generic template for all our ReAct agents. The specific instructions
-# for each agent will be injected into the `instructions` variable.
-# It tells the agent how to use tools and format its final answer.
 REACT_AGENT_PROMPT_TEMPLATE = """
 You are a specialized assistant for the Codebase Copilot project.
 You have access to a set of tools to help you analyze a software codebase.
@@ -51,5 +49,4 @@ User Request: {input}
 Thought: {agent_scratchpad}
 """
 
-# Create a PromptTemplate from the base string
 REACT_AGENT_PROMPT = PromptTemplate.from_template(REACT_AGENT_PROMPT_TEMPLATE)
