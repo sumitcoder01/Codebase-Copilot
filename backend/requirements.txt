@@ -1,14 +1,36 @@
+# Core Frameworks
 fastapi
 uvicorn[standard]
 python-dotenv
 python-multipart
+
+# LangChain & LangGraph
 langchain
 langgraph
 langchain-core
+
+# Vector Store
 chromadb
+langchain-chroma 
 tiktoken
+
+# --- LLM Providers ---
+# DeepSeek
 langchain-deepseek
+
+# Google Gemini
 langchain-google-genai
+
+# OpenAI
 langchain-openai
+
+# Anthropic
 langchain-anthropic
+
+# Groq
 langchain-groq
+
+# --- Testing ---
+pytest
+pytest-asyncio
+httpx

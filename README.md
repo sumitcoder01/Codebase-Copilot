@@ -67,6 +67,13 @@ GROQ_API_KEY="YOUR_GROQ_API_KEY"
 
 ### 3. Install Dependencies
 
+### create a virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
 #### Backend
 
 ```bash
