@@ -21,7 +21,7 @@ __pycache__/
 # --- Session Data ---
 # Ignore the sessions directory which contains generated vector stores and logs.
 sessions/
-
+sessions_code/
 # --- IDE & Editor Configuration ---
 # Ignore configuration files from common editors and IDEs
 .idea/
@@ -43,6 +43,7 @@ dist/
 htmlcov/
 .coverage
 coverage.xml
+
 
 # --- Operating System Files ---
 # Ignore macOS specific files

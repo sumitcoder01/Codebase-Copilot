@@ -18,35 +18,22 @@ class AgentState(TypedDict):
     next: str
 
 def supervisor_node(state: AgentState) -> dict:
-    """
-    The supervisor node. It now ONLY looks at the last human message to
-    decide the next step, which prevents feedback loops.
-    """
     log.info(f"Supervisor running for session: {state['session_id']}")
     llm = get_llm()
-    
-    # *** THE DEFINITIVE FIX IS HERE ***
-    # Find the last message from the human to use as the routing instruction.
-    # This prevents the supervisor from being influenced by previous AI responses.
     last_human_message = ""
     for message in reversed(state["messages"]):
         if isinstance(message, HumanMessage):
             last_human_message = message.content
             break
-
-    # If there's no human message, something is wrong, so we end.
     if not last_human_message:
         return {"next": "END"}
     
-    # Format the prompt with only the user's direct query.
     prompt = SUPERVISOR_PROMPT.format(messages=last_human_message)
-    
     supervisor_chain = llm | (lambda x: x.content.strip())
     next_agent_name = supervisor_chain.invoke(prompt)
 
     log.info(f"Supervisor decided next step is: '{next_agent_name}'")
     
-    # Use a cleaner routing logic
     if "QA_Agent" in next_agent_name:
         return {"next": "QA_Agent"}
     elif "Debug_Agent" in next_agent_name:
@@ -56,10 +43,7 @@ def supervisor_node(state: AgentState) -> dict:
     elif "Diagram_Agent" in next_agent_name:
         return {"next": "Diagram_Agent"}
     else:
-        # If the model outputs "Finish" or any other text, we end the conversation.
         return {"next": "END"}
-
-# --- The rest of the file remains exactly the same ---
 
 def agent_node(state: AgentState) -> dict:
     agent_name = state['next']
@@ -74,19 +58,36 @@ def agent_node(state: AgentState) -> dict:
     return {"messages": [ai_message]}
 
 def create_graph() -> StateGraph:
+    """
+    Creates the graph with a linear, non-looping workflow.
+    Supervisor -> Agent -> END
+    """
     log.info("Creating LangGraph graph...")
     workflow = StateGraph(AgentState)
     workflow.add_node("supervisor", supervisor_node)
     workflow.add_node("agent_node", agent_node)
+    
     def router(state: AgentState) -> str:
         if state["next"] == "END":
             return "END"
         return "agent_node"
+        
     workflow.set_entry_point("supervisor")
-    workflow.add_conditional_edges("supervisor", router, {"agent_node": "agent_node", "END": END})
-    workflow.add_edge("agent_node", "supervisor")
-    log.info("Graph created successfully.")
+    workflow.add_conditional_edges(
+        "supervisor",
+        router,
+        { "agent_node": "agent_node", "END": END }
+    )
+    
+    # *** THE DEFINITIVE FIX TO THE LOOP ***
+    # Instead of looping back to the supervisor, we end the graph run
+    # after the agent has produced its output.
+    workflow.add_edge("agent_node", END)
+    
+    log.info("Graph created successfully with a non-looping structure.")
     return workflow
+
+# --- The rest of the file is the same ---
 
 graph_app = create_graph().compile(checkpointer=MemorySaver())
 log.info("Graph compiled successfully with memory saver.")
