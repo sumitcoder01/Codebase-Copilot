@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
     container_name: codebase_copilot_backend
     ports:
       - "8000:8000"
@@ -14,7 +16,9 @@ services:
       - .env
 
   frontend:
-    build: ./frontend
+    build:
+      context: . # The build context is also the project root
+      dockerfile: frontend.Dockerfile # Specify the correct Dockerfile name
     container_name: codebase_copilot_frontend
     ports:
       - "8501:8501"

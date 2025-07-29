@@ -5,11 +5,10 @@ services:
   - type: web
     name: codebase-copilot-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: ./backend.Dockerfile
     healthCheck:
       path: /
       initialDelaySeconds: 60
-    # Persistent disks to store session data across deploys
     disks:
       - name: sessions
         mountPath: /app/sessions
@@ -17,8 +16,6 @@ services:
       - name: sessions-code
         mountPath: /app/sessions_code
         sizeGB: 2
-    # Environment variables will be set in the Render UI
-    # See deployment guide below
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
@@ -29,11 +26,9 @@ services:
   - type: web
     name: codebase-copilot-frontend
     runtime: docker
-    dockerfilePath: ./frontend/Dockerfile
+    dockerfilePath: ./frontend.Dockerfile 
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
-      # IMPORTANT: This tells the frontend how to communicate with the backend
-      # using Render's internal service discovery.
       - key: STREAMLIT_BACKEND_URL
         value: http://codebase-copilot-backend:8000/api
