@@ -39,15 +39,13 @@ if "messages" not in st.session_state:
 
 # --- Main Application Logic ---
 
-# ... (keep all the setup code and imports the same)
-
 def main():
     """Main function to run the Streamlit application."""
     st.title("🤖 Codebase Copilot")
     st.caption("Your AI-powered assistant for understanding any codebase.")
 
     if not BACKEND_URL:
-        st.error("Backend URL is not configured. Please set STREAMLIT_BACKEND_URL in your .env file.")
+        st.error("Backend URL is not configured.")
         st.stop()
 
     # --- Sidebar for Codebase Upload ---
@@ -56,29 +54,45 @@ def main():
         tab1, tab2 = st.tabs(["From GitHub URL", "Upload ZIP"])
 
         with tab1:
-            st.write("Analyze a public GitHub repository.")
-            github_url = st.text_input("Enter GitHub Repository URL", key="github_url_input", placeholder="https://github.com/user/repo")
+            st.write("Analyze a public or private GitHub repository.")
+            github_url = st.text_input("GitHub Repository URL", key="github_url_input", placeholder="https://github.com/user/repo")
+            
+            # Use a password field for the PAT for security
+            pat = st.text_input("GitHub Personal Access Token (for private repos)", type="password", key="github_pat")
+
+            with st.expander("What is a Personal Access Token?"):
+                st.info(
+                    "A Personal Access Token (PAT) is like a password for GitHub. "
+                    "It allows this application to securely clone your private repository on your behalf. "
+                    "Your token is used only for this cloning operation and is never stored."
+                )
+                st.markdown(
+                    "**To create a token:**\n"
+                    "1. Go to your GitHub Settings -> Developer settings -> Personal access tokens (classic).\n"
+                    "2. Click 'Generate new token'.\n"
+                    "3. Give it a name (e.g., 'CodebaseCopilot').\n"
+                    "4. **Select the `repo` scope.** This is all that's needed.\n"
+                    "5. Click 'Generate token' and copy the key."
+                )
+
             if st.button("Analyze from URL"):
                 if github_url and "github.com" in github_url:
                     with st.spinner("Cloning and processing repository..."):
                         try:
-                            # Use the new dedicated endpoint: /repo/clone
-                            payload = {"repo_url": github_url}
+                            # Include the token in the payload if it exists
+                            payload = {"repo_url": github_url, "token": pat if pat else None}
                             response = requests.post(f"{BACKEND_URL}/repo/clone", json=payload)
                             
                             if response.status_code == 200:
                                 data = response.json()
                                 st.session_state.session_id = data["session_id"]
                                 st.session_state.messages = []
-                                log.info(f"New session started from URL: {st.session_state.session_id}")
-                                st.success("Analysis complete! You can now ask questions.")
+                                st.success("Analysis complete!")
                                 st.rerun()
                             else:
-                                log.error(f"Backend error on URL upload: {response.text}")
                                 st.error(f"Error: {response.json().get('detail', 'Failed to process repository.')}")
                         
                         except requests.exceptions.RequestException as e:
-                            log.error(f"Could not connect to backend: {e}")
                             st.error("Connection Error: Could not connect to the backend.")
                 else:
                     st.warning("Please enter a valid GitHub URL.")
@@ -90,28 +104,23 @@ def main():
                 if st.button("Analyze ZIP File"):
                     with st.spinner("Processing repository..."):
                         try:
-                            # Use the new dedicated endpoint: /repo/upload_zip
                             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/zip")}
                             response = requests.post(f"{BACKEND_URL}/repo/upload_zip", files=files)
-                            
                             if response.status_code == 200:
                                 data = response.json()
                                 st.session_state.session_id = data["session_id"]
                                 st.session_state.messages = []
-                                log.info(f"New session started from ZIP: {st.session_state.session_id}")
-                                st.success("Analysis complete! You can now ask questions.")
+                                st.success("Analysis complete!")
                                 st.rerun()
                             else:
-                                log.error(f"Backend error on ZIP upload: {response.text}")
                                 st.error(f"Error: {response.json().get('detail', 'Failed to process repository.')}")
-                        
                         except requests.exceptions.RequestException as e:
-                            log.error(f"Could not connect to backend: {e}")
                             st.error("Connection Error: Could not connect to the backend.")
-
-    # --- Main Chat Interface (This part remains the same) ---
+    
+    # --- Main Chat Interface (This part remains unchanged) ---
     if st.session_state.session_id:
         st.header(f"2. Ask Questions (Session: ...{st.session_state.session_id[-6:]})")
+        # ... (the rest of the chat interface code is the same)
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
@@ -128,11 +137,9 @@ def main():
                             full_response = response.text
                             st.markdown(full_response)
                         else:
-                            log.error(f"Chat error from backend: {response.text}")
                             full_response = f"Error: {response.json().get('detail', 'An unknown error occurred.')}"
                             st.error(full_response)
                     except requests.exceptions.RequestException as e:
-                        log.error(f"Could not connect to backend during chat: {e}")
                         full_response = "Connection Error: Could not get a response from the backend."
                         st.error(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
