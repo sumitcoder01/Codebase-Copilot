@@ -5,7 +5,11 @@ services:
   - type: web
     name: codebase-copilot-backend
     runtime: docker
-    dockerfilePath: ./backend.Dockerfile
+    # We are nesting the dockerfilePath under a 'build' key.
+    # This is a more explicit way to configure the build for Render.
+    build:
+      context: .
+      dockerfilePath: backend.Dockerfile
     healthCheck:
       path: /
       initialDelaySeconds: 60
@@ -26,7 +30,10 @@ services:
   - type: web
     name: codebase-copilot-frontend
     runtime: docker
-    dockerfilePath: ./frontend.Dockerfile 
+    # We are making the same structural change here.
+    build:
+      context: .
+      dockerfilePath: frontend.Dockerfile
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
