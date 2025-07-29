@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: codebase_copilot_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # These volumes ensure your session data persists on your local machine
+      - ./sessions:/app/sessions
+      - ./sessions_code:/app/sessions_code
+    env_file:
+      - .env
+
+  frontend:
+    build: ./frontend
+    container_name: codebase_copilot_frontend
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    env_file:
+      - .env
