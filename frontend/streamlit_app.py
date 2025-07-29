@@ -1,10 +1,8 @@
 import streamlit as st
 import requests
-import time
 import os
 import sys
 from dotenv import load_dotenv
-
 
 # Load environment variables from the .env file in the project root
 load_dotenv()
@@ -41,94 +39,106 @@ if "messages" not in st.session_state:
 
 # --- Main Application Logic ---
 
+# ... (keep all the setup code and imports the same)
+
 def main():
     """Main function to run the Streamlit application."""
     st.title("🤖 Codebase Copilot")
     st.caption("Your AI-powered assistant for understanding any codebase.")
 
-    # Check if the backend URL is properly configured
-    if "127.0.0.1" in BACKEND_URL:
-        st.sidebar.info("Running in local development mode.")
     if not BACKEND_URL:
         st.error("Backend URL is not configured. Please set STREAMLIT_BACKEND_URL in your .env file.")
-        st.stop() # Halt the app if the backend URL is missing
+        st.stop()
 
     # --- Sidebar for Codebase Upload ---
     with st.sidebar:
-        st.header("1. Upload Your Codebase")
-        st.write(
-            "Upload a `.zip` file of your repository. "
-            "A new session will be created for analysis."
-        )
-        
-        uploaded_file = st.file_uploader(
-            "Choose a .zip file", type="zip", label_visibility="collapsed"
-        )
+        st.header("1. Start a New Session")
+        tab1, tab2 = st.tabs(["From GitHub URL", "Upload ZIP"])
 
-        if uploaded_file is not None:
-            if st.button("Analyze Codebase"):
-                with st.spinner("Processing repository... This may take a moment."):
-                    try:
-                        files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/zip")}
-                        response = requests.post(f"{BACKEND_URL}/repo/upload", files=files)
+        with tab1:
+            st.write("Analyze a public GitHub repository.")
+            github_url = st.text_input("Enter GitHub Repository URL", key="github_url_input", placeholder="https://github.com/user/repo")
+            if st.button("Analyze from URL"):
+                if github_url and "github.com" in github_url:
+                    with st.spinner("Cloning and processing repository..."):
+                        try:
+                            # Use the new dedicated endpoint: /repo/clone
+                            payload = {"repo_url": github_url}
+                            response = requests.post(f"{BACKEND_URL}/repo/clone", json=payload)
+                            
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.session_state.session_id = data["session_id"]
+                                st.session_state.messages = []
+                                log.info(f"New session started from URL: {st.session_state.session_id}")
+                                st.success("Analysis complete! You can now ask questions.")
+                                st.rerun()
+                            else:
+                                log.error(f"Backend error on URL upload: {response.text}")
+                                st.error(f"Error: {response.json().get('detail', 'Failed to process repository.')}")
+                        
+                        except requests.exceptions.RequestException as e:
+                            log.error(f"Could not connect to backend: {e}")
+                            st.error("Connection Error: Could not connect to the backend.")
+                else:
+                    st.warning("Please enter a valid GitHub URL.")
 
-                        if response.status_code == 200:
-                            data = response.json()
-                            st.session_state.session_id = data["session_id"]
-                            st.session_state.messages = [] # Reset chat history
-                            log.info(f"New session started: {st.session_state.session_id}")
-                            st.success("Analysis complete! You can now ask questions about your code.")
-                            st.rerun() # Rerun to switch to the chat view
-                        else:
-                            log.error(f"Backend error on upload: {response.text}")
-                            st.error(f"Error: {response.json().get('detail', 'Failed to process repository.')}")
-                    
-                    except requests.exceptions.RequestException as e:
-                        log.error(f"Could not connect to backend: {e}")
-                        st.error("Connection Error: Could not connect to the backend. Please ensure it's running.")
+        with tab2:
+            st.write("Upload a `.zip` file of your repository.")
+            uploaded_file = st.file_uploader("Choose a .zip file", type="zip", label_visibility="collapsed")
+            if uploaded_file is not None:
+                if st.button("Analyze ZIP File"):
+                    with st.spinner("Processing repository..."):
+                        try:
+                            # Use the new dedicated endpoint: /repo/upload_zip
+                            files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/zip")}
+                            response = requests.post(f"{BACKEND_URL}/repo/upload_zip", files=files)
+                            
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.session_state.session_id = data["session_id"]
+                                st.session_state.messages = []
+                                log.info(f"New session started from ZIP: {st.session_state.session_id}")
+                                st.success("Analysis complete! You can now ask questions.")
+                                st.rerun()
+                            else:
+                                log.error(f"Backend error on ZIP upload: {response.text}")
+                                st.error(f"Error: {response.json().get('detail', 'Failed to process repository.')}")
+                        
+                        except requests.exceptions.RequestException as e:
+                            log.error(f"Could not connect to backend: {e}")
+                            st.error("Connection Error: Could not connect to the backend.")
 
-    # --- Main Chat Interface ---
+    # --- Main Chat Interface (This part remains the same) ---
     if st.session_state.session_id:
         st.header(f"2. Ask Questions (Session: ...{st.session_state.session_id[-6:]})")
-
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
-
-        if prompt := st.chat_input("Ask about your codebase... (e.g., 'Find bugs in main.py')"):
+        if prompt := st.chat_input("Ask about your codebase..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
-
             with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                full_response = ""
-                try:
-                    data = {"query": prompt}
-                    with requests.post(
-                        f"{BACKEND_URL}/chat/{st.session_state.session_id}",
-                        json=data,
-                        stream=True,
-                    ) as r:
-                        if r.status_code == 200:
-                            for chunk in r.iter_content(chunk_size=None):
-                                full_response += chunk.decode('utf-8')
-                                message_placeholder.markdown(full_response + "▌")
-                            message_placeholder.markdown(full_response)
+                with st.spinner("The agent is thinking..."):
+                    try:
+                        data = {"query": prompt}
+                        response = requests.post(f"{BACKEND_URL}/chat/{st.session_state.session_id}", json=data)
+                        if response.status_code == 200:
+                            full_response = response.text
+                            st.markdown(full_response)
                         else:
-                            log.error(f"Chat error from backend: {r.text}")
-                            full_response = f"Error: {r.json().get('detail', 'An unknown error occurred.')}"
-                            message_placeholder.error(full_response)
-
-                except requests.exceptions.RequestException as e:
-                    log.error(f"Could not connect to backend during chat: {e}")
-                    full_response = "Connection Error: Could not get a response from the backend."
-                    message_placeholder.error(full_response)
-            
+                            log.error(f"Chat error from backend: {response.text}")
+                            full_response = f"Error: {response.json().get('detail', 'An unknown error occurred.')}"
+                            st.error(full_response)
+                    except requests.exceptions.RequestException as e:
+                        log.error(f"Could not connect to backend during chat: {e}")
+                        full_response = "Connection Error: Could not get a response from the backend."
+                        st.error(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
-
     else:
-        st.info("Upload a zipped codebase in the sidebar to begin.")
+        st.info("Start a new session from the sidebar to begin analyzing a codebase.")
 
+# Run the main function when the script is executed
 if __name__ == "__main__":
     main()
