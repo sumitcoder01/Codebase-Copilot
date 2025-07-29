@@ -2,6 +2,7 @@ import os
 import zipfile
 import logging
 from typing import List
+import git
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
@@ -70,3 +71,23 @@ def load_and_chunk_codebase(repo_path: str) -> List[Document]:
     log.info(f"Finished chunking. Total documents: {len(documents)}, Total chunks: {len(chunked_documents)}")
     
     return chunked_documents
+
+def clone_github_repo(repo_url: str, clone_to: str) -> None:
+    """
+    Clones a public GitHub repository to a specified local path.
+
+    Args:
+        repo_url (str): The URL of the public GitHub repository.
+        clone_to (str): The local directory to clone the repository into.
+    """
+    log.info(f"Cloning GitHub repository from '{repo_url}' to '{clone_to}'...")
+    try:
+        git.Repo.clone_from(repo_url, clone_to)
+        log.info("Successfully cloned repository.")
+    except git.exc.GitCommandError as e:
+        log.error(f"Failed to clone repository: {e}", exc_info=True)
+        # Provide a more user-friendly error message
+        raise RuntimeError(f"Failed to clone repository. Please ensure it is a valid public URL.")
+    except Exception as e:
+        log.error(f"An unexpected error occurred during cloning: {e}", exc_info=True)
+        raise

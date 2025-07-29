@@ -30,6 +30,10 @@ langchain-anthropic
 # Groq
 langchain-groq
 
+# github
+GitPython
+
+
 # --- Testing ---
 pytest
 pytest-asyncio
