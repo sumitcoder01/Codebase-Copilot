@@ -13,8 +13,7 @@ log = logging.getLogger(__name__)
 def create_agent(session_id: str, agent_type: str) -> AgentExecutor:
     """
     Factory function to create a specific type of ReAct agent.
-    This version includes much stricter, more prescriptive instructions
-    to improve the agent's reasoning and memory.
+    This version includes much stricter instructions to enforce a separation of concerns.
     """
     log.info(f"Creating agent of type '{agent_type}' for session '{session_id}'")
     llm = get_llm()
@@ -25,44 +24,43 @@ def create_agent(session_id: str, agent_type: str) -> AgentExecutor:
     list_tool = ListFilesTool(session_id=session_id)
     read_tool = ReadFileTool(session_id=session_id)
 
-    # A common set of strict instructions for using tools
     tool_usage_instructions = (
         "To find the correct file path, you MUST use the 'list_files' tool first. "
         "Examine the output of 'list_files' to determine the full, correct path to a file. "
-        "When you use 'read_file', you MUST provide the complete, relative path you discovered. "
-        "For example: if 'list_files' returns 'src', your next step should be 'list_files' on 'src'. "
-        "If that returns 'main.py', you must then use 'read_file' with the path 'src/main.py'."
+        "When you use 'read_file', you MUST provide the complete, relative path you discovered."
     )
 
     if agent_type == "QA_Agent":
         instructions = (
-            "You are a Q&A expert. Your goal is to answer questions about the codebase. "
+            "You are a Q&A expert. Your ONLY job is to answer questions about the codebase. "
+            "Do NOT suggest refactoring or debugging. "
             f"{tool_usage_instructions} After exploring the files, use the 'codebase_retriever' "
-            "tool to find relevant code snippets and answer the user's question."
+            "tool to find relevant code snippets to answer the user's question."
         )
         tools.extend([list_tool, get_retriever_tool(session_id)])
 
     elif agent_type == "Debug_Agent":
         instructions = (
-            "You are a debugging expert. Your job is to find bugs in a specific file. "
-            f"{tool_usage_instructions} Once you have read the file's content, analyze it for bugs, "
-            "vulnerabilities, and errors, and provide a detailed report."
+            "You are a debugging expert. Your ONLY job is to analyze a file for bugs, vulnerabilities, and code smells. "
+            "You MUST NOT refactor or rewrite the code. Your output must be a clear, formatted report of your findings. "
+            "This report will be passed to the Refactor_Agent. "
+            f"{tool_usage_instructions}"
         )
         tools.extend([list_tool, read_tool])
 
     elif agent_type == "Refactor_Agent":
         instructions = (
-            "You are a code refactoring specialist. Your job is to improve a file. "
-            f"{tool_usage_instructions} Once you have read the file's content, rewrite and improve the code, "
-            "focusing on readability, efficiency, and best practices. Explain the key changes you made."
+            "You are a code refactoring specialist. You will receive context from the Debug_Agent that describes issues in a file. "
+            "Your ONLY job is to rewrite and improve the code based on the provided report. "
+            f"{tool_usage_instructions} Present the complete, refactored code for the file."
         )
         tools.extend([list_tool, read_tool])
     
     elif agent_type == "Diagram_Agent":
         instructions = (
-            "You are a software architecture visualizer. Your task is to create diagrams. "
-            f"{tool_usage_instructions} After reading one or more files to understand the logic, "
-            "generate a diagram in Mermaid.js syntax. ONLY output the Mermaid.js code block."
+            "You are a software architecture visualizer. Your ONLY job is to create diagrams. "
+            f"{tool_usage_instructions} After reading files to understand the logic, "
+            "your output MUST ONLY be the Mermaid.js code block for the diagram. Do not add any other explanation."
         )
         tools.extend([list_tool, read_tool])
 
