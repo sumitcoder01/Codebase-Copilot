@@ -39,6 +39,32 @@ def _process_repository(session_code_path: str, session_id: str):
     else:
         log.warning(f"No documents were found to process for session {session_id}.")
 
+
+@router.get("/repo/{session_id}/files")
+async def get_file_tree(session_id: str):
+    """
+    Scans the session's code directory and returns a list of all file paths.
+    """
+    log.info(f"Fetching file tree for session: {session_id}")
+    session_code_path = os.path.join(SESSIONS_CODE_DIR, session_id)
+
+    if not os.path.isdir(session_code_path):
+        log.error(f"Session code directory not found for session_id: {session_id}")
+        raise HTTPException(status_code=404, detail="Session not found or repository not processed.")
+
+    file_paths = []
+    for root, _, files in os.walk(session_code_path):
+        for file in files:
+            full_path = os.path.join(root, file)
+            # Create a relative path from the session's code directory
+            relative_path = os.path.relpath(full_path, session_code_path)
+            file_paths.append(relative_path)
+    
+    # Sort the list for a consistent, clean presentation
+    file_paths.sort()
+    
+    return {"files": file_paths}
+
 # --- Endpoint 1: For GitHub URL ---
 @router.post("/repo/clone")
 async def clone_repo_from_url(request: RepoURLRequest):
